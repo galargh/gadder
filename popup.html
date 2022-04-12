@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html style="width: 800px;">
+  <head>
+    <script type="module" src="popup.js"></script>
+    <link href="https://unpkg.com/@primer/css@^19.0.0/dist/primer.css" rel="stylesheet"></link>
+    <style>
+      .Box-row:first-of-type {
+        border-top-color: transparent;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="Header">
+      <div class="Header-item">
+        <img class="octicon octicon-mark-github mr-2" height="32" alt="GAdder" src="./images/gadder512.png" width="32">
+      </div>
+      <div class="Header-item">
+        <input id="search" type="search" class="form-control Header-input width-full" placeholder="Search issues and pull requests"></input>
+      </div>
+    </div>
+
+    <div class="px-3 my-3">
+        <div>
+          <div>
+            <h1 class="f3">
+              All runs
+            </h1>
+          </div>
+        </div>
+
+        <div class="Box mt-3">
+          <div class="Box-header">
+            <h3 class="Box-title">
+              <span id="count">0</span>
+              runs
+            </h3>
+          </div>
+          <div id="runs"></div>
+        </div>
+    </div>
+  </body>
+</html>
