@@ -20,5 +20,11 @@
       "matches": ["https://github.com/*/*/projects/*"],
       "js": ["content.js"]
     }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["images/*"],
+      "matches": ["https://github.com/*"]
+    }
   ]
 }
