@@ -2,7 +2,7 @@
 
 Welcome to **GAdder** - *GitHub Projects (Beta) Helper*.
 
-![A GAdder usage example](images/gadder.gif)
+![A GAdder usage example](images/walkthrough.gif)
 
 ## How to use it?
 
