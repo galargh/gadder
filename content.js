@@ -188,10 +188,10 @@ function getProjectColumnValues() {
     }
   }
   // table view
-  const columnId = document.querySelector('[data-test-id^="grouped-label-"]')
-    .getAttribute('data-test-id')
-    .substr('grouped-label-'.length);
-  if (columnId) {
+  if (document.querySelector('[data-test-id^="grouped-label-"]')) {
+    const columnId = document.querySelector('[data-test-id^="grouped-label-"]')
+      .getAttribute('data-test-id')
+      .substr('grouped-label-'.length);
     const columnValueName = STATE.repoSearcherInput.closest('[data-test-id^="table-group-footer-"]')
       .getAttribute('data-test-id')
       .substr('table-group-footer-'.length);
@@ -278,7 +278,7 @@ async function addIssues(issueSearcherListItem) {
 function setRepoSearcherInput(repoSearcherInput) {
   STATE.repoSearcherInput = repoSearcherInput;
 
-  if (STATE.phase == 'select' || (STATE.phase == 'add' && STATE.complete === STATE.total)) {
+  if (STATE.phase == 'select' || STATE.phase == 'search' || (STATE.phase == 'add' && STATE.complete === STATE.total)) {
     searchIssuesPreview();
   } else {
     showIssueSearcherList();
