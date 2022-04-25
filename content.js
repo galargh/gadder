@@ -21,6 +21,8 @@ function capitalize(string) {
 const memexItemCreateAPIData = JSON.parse(document.getElementById('memex-item-create-api-data').innerHTML)
 const memexData = JSON.parse(document.getElementById('memex-data').innerHTML);
 const memexOwner = JSON.parse(document.getElementById('memex-owner').innerHTML);
+const memexColumnsData = JSON.parse(document.getElementById('memex-columns-data').innerHTML);
+
 const portalRoot = document.getElementById('portal-root');
 const gadderIcon = chrome.runtime.getURL('images/gadder64.png')
 
@@ -29,7 +31,7 @@ const STATE = {
   phase: 'select', // 'search', 'select', 'fetch', 'add'
   issues: [],
   complete: 0,
-  total: 0
+  total: 0,
 }
 
 const issueSearcherList = renderNode(`<div class='SelectMenu' style='visibility: hidden;'><div class='SelectMenu-modal m-0'><ul class="SelectMenu-list SelectMenu-list--borderless"></ul></div></div>`)
@@ -159,6 +161,7 @@ function showIssueSearcherList() {
     children.push(loaderHTML, footerHTML);
   }
   issueSearcherList.querySelector('ul').replaceChildren(...children);
+  issueSearcherList.hidden = false;
   const repoSearcherInputRect = STATE.repoSearcherInput.getBoundingClientRect();
   const issueSearcherListRect = issueSearcherList.getBoundingClientRect();
   issueSearcherList.setAttribute('style', `visibility: visible; max-height: ${repoSearcherInputRect.top}px; left: ${repoSearcherInputRect.left}px; top: ${repoSearcherInputRect.top - issueSearcherListRect.height}px;`);
@@ -166,10 +169,61 @@ function showIssueSearcherList() {
 
 function hideIssueSearcherList() {
   issueSearcherList.setAttribute('style', 'visibility: hidden;');
+  issueSearcherList.hidden = true;
 }
 
-async function createProjectItem(link) {
+function getProjectColumnValues() {
+  if (document.querySelector('[data-test-id="board-view"]')) {
+    const columnValueId = document.querySelector('[data-test-id="board-view-add-card-indicator"]')
+      .closest('[data-test-id="board-view-column"]')
+      .getAttribute('id');
+    const columnId = memexColumnsData.find(column => {
+      return column.settings?.options?.find(option => {
+        return option.id === columnValueId;
+      });
+    }).id;
+    return {
+      memexProjectColumnId: columnId,
+      value: columnValueId,
+    }
+  }
+  // table view
+  const columnId = document.querySelector('[data-test-id^="grouped-label-"]')
+    .getAttribute('data-test-id')
+    .substr('grouped-label-'.length);
+  if (columnId) {
+    const columnValueName = STATE.repoSearcherInput.closest('[data-test-id^="table-group-footer-"]')
+      .getAttribute('data-test-id')
+      .substr('table-group-footer-'.length);
+    if (columnValueName) {
+      const columnValue = memexColumnsData.find(column => {
+        return column.id === columnId;
+      }).settings.options.find(option => {
+        return option.name === columnValueName;
+      });
+      if (columnValue) {
+        return {
+          memexProjectColumnId: columnId,
+          value: columnValue.id,
+        }
+      }
+    }
+  }
+  return null;
+}
+
+async function createProjectItem(link, projectColumnValues) {
   console.log(`Adding item from ${link}`);
+  const body = [
+    encodeURIComponent('memexProjectItem[contentType]') + '=' + encodeURIComponent('DraftIssue'),
+    encodeURIComponent('memexProjectItem[content][title]') + '=' + encodeURIComponent(link),
+  ]
+  if (projectColumnValues) {
+    body.push(
+      encodeURIComponent('memexProjectItem[memexProjectColumnValues][][memexProjectColumnId]') + '=' + encodeURIComponent(projectColumnValues.memexProjectColumnId),
+      encodeURIComponent('memexProjectItem[memexProjectColumnValues][][value]') + '=' + encodeURIComponent(projectColumnValues.value),
+    );
+  }
   const response = await fetch(memexItemCreateAPIData.url, {
     method: 'POST',
     headers: {
@@ -177,17 +231,13 @@ async function createProjectItem(link) {
       'content-type': 'application/x-www-form-urlencoded',
       'scoped-csrf-token': memexItemCreateAPIData.token,
     },
-    body: [
-      encodeURIComponent('memexProjectItem[contentType]') + '=' + encodeURIComponent('DraftIssue'),
-      encodeURIComponent('memexProjectItem[content][title]') + '=' + encodeURIComponent(link),
-      encodeURIComponent('memexProjectItem[memexProjectColumnValues][]')
-    ].join('&').replace(/%20/g, '+'),
+    body: body.join('&').replace(/%20/g, '+'),
   });
   console.log(`Response: ${response.status}`);
   return response;
 }
 
-async function createProjectItemsSequentially(issues) {
+async function createProjectItemsSequentially(issues, projectColumnValues) {
   const allResponses = [];
 
   STATE.phase = 'add';
@@ -197,7 +247,7 @@ async function createProjectItemsSequentially(issues) {
 
   for (let issueIndex = 0; issueIndex < issues.length; issueIndex++) {
     const issue = issues[issueIndex];
-    const response = await createProjectItem(issue.href);
+    const response = await createProjectItem(issue.href, projectColumnValues);
     allResponses.push(response);
     console.log(`Added ${allResponses.length} out of ${issues.length} issues`);
 
@@ -205,33 +255,40 @@ async function createProjectItemsSequentially(issues) {
     updateStateElement('complete');
   }
 
+  showIssueSearcherList();
+
   return allResponses;
 }
 
 async function addIssues(issueSearcherListItem) {
   const data = issueSearcherListItem.getAttribute('data');
   const dataType = issueSearcherListItem.getAttribute('data-type');
+  const projectColumnValues = getProjectColumnValues();
+
   if (dataType === 'query') {
     return searchIssuesPaginated(data)
-      .then(createProjectItemsSequentially);
+      .then(issues => {
+        return createProjectItemsSequentially(issues, projectColumnValues)
+      });
   } else if (dataType === 'link') {
-    return createProjectItemsSequentially([{href: data}]);
+    return createProjectItemsSequentially([{href: data}], projectColumnValues);
   }
 }
 
-function isSearchAllowed() {
-  return STATE.phase == 'select' || (STATE.phase == 'add' && STATE.complete === STATE.total);
+function setRepoSearcherInput(repoSearcherInput) {
+  STATE.repoSearcherInput = repoSearcherInput;
+
+  if (STATE.phase == 'select' || (STATE.phase == 'add' && STATE.complete === STATE.total)) {
+    searchIssuesPreview();
+  } else {
+    showIssueSearcherList();
+  }
 }
 
 document.addEventListener('input', debounce(event => {
   if (event.target.getAttribute('data-test-id') === 'repo-searcher-input') {
     if (event.target.value.startsWith('q=')) {
-      STATE.repoSearcherInput = event.target;
-      if (isSearchAllowed()) {
-        searchIssuesPreview();
-      } else {
-        showIssueSearcherList();
-      }
+      setRepoSearcherInput(event.target);
     } else {
       hideIssueSearcherList();
     }
@@ -240,12 +297,7 @@ document.addEventListener('input', debounce(event => {
 
 document.addEventListener('click', event => {
   if (event.target.getAttribute('data-test-id') === 'repo-searcher-input' && event.target.value.startsWith('q=')) {
-    STATE.repoSearcherInput = event.target;
-    if (isSearchAllowed()) {
-      searchIssuesPreview();
-    } else {
-      showIssueSearcherList();
-    }
+    setRepoSearcherInput(event.target);
   } else if (issueSearcherList.contains(event.target)) {
     if (event.target.tagName !== 'A') {
       const issueSearcherListItem = event.target.closest('li');
