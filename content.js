@@ -23,6 +23,23 @@ const memexData = JSON.parse(document.getElementById('memex-data').innerHTML);
 const memexOwner = JSON.parse(document.getElementById('memex-owner').innerHTML);
 const memexColumnsData = JSON.parse(document.getElementById('memex-columns-data').innerHTML);
 
+const liveUpdateListener = document.querySelector('.js-socket-channel[data-test-id="live-update-listener"]');
+const dataChannel = liveUpdateListener.getAttribute('data-channel');
+const [dataChannelContent, dataChannelSignature] = dataChannel.split('--');
+const dataChannelSubscription = JSON.parse(atob(dataChannelContent));
+const projectItemCreateEvent = new CustomEvent('socket:message', {
+  bubbles: false,
+  cancelable: false,
+  detail: {
+    name: dataChannelSubscription.c,
+    data: {
+      type: 'github.memex.v0.ProjectItemCreate',
+      wait: 0
+    },
+    cached: false
+  }
+});
+
 const portalRoot = document.getElementById('portal-root');
 const gadderIcon = chrome.runtime.getURL('images/gadder64.png')
 
@@ -303,6 +320,7 @@ document.addEventListener('click', event => {
       const issueSearcherListItem = event.target.closest('li');
       if (issueSearcherListItem) {
         addIssues(issueSearcherListItem).then(() => {
+          liveUpdateListener.dispatchEvent(projectItemCreateEvent);
           setTimeout(() => {
             searchIssuesPreview();
           }, 3000);
