@@ -7,6 +7,10 @@ Welcome to **GAdder** - *GitHub Projects (Beta) Helper*.
 ## How to use it?
 
 1. Install the extension.
+    1. Go to https://github.com/galargh/gadder/releases/latest and download the `Source code`
+    1. Unpack the downloaded `gadder` package
+    1. Go to [chrome://extensions/](chrome://extensions/)
+    1. `Load unpacked` and select the unpacked `gadder` directory
 2. Open a *GitHub Project (Beta)*.
 3. Type `q=` into the *add an item* box.
 4. Either click on an individual issue to create a single project item or click `Add all * issues` to create `*` project items.
