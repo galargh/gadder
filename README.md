@@ -1,3 +1,5 @@
+:exclamation: The project is now deprecated as GitHub Projects (Beta) now supports adding cross-org items through [the API](https://docs.github.com/en/issues/planning-and-tracking-with-projects/automating-your-project/using-the-api-to-manage-projects).
+
 # ![GAdder Logo](images/gadder64.png) GAdder
 
 Welcome to **GAdder** - *GitHub Projects (Beta) Helper*.
